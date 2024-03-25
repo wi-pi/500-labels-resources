@@ -1,6 +1,6 @@
 # A Picture is Worth 500 Labels: A Case Study of Demographic Disparities in Local Machine Learning Models for Instagram and TikTok Source Code
 
-This repo contains all resources for the paper, "A Picture is Worth 500 Labels: A Case Study of Demographic Disparities in Local Machine Learning Models for Instagram and TikTok" published at Oakland 2024.
+This repo contains all resources for the paper, "A Picture is Worth 500 Labels: A Case Study of Demographic Disparities in Local Machine Learning Models for Instagram and TikTok" published at IEEE Symposium on Security and Privacy 2024.
 
 We break up the resources into three categories:
 1. Dynamic Analysis Code
