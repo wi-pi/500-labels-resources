@@ -15,7 +15,7 @@ All resources are under the `Dynamic_Analysis_Code` folder.
 Within this folder there are three sub-folders: `OS_Code`, `python_scripts`, and `frida_scripts`.
 Each folder will have a README file explaining their respective contents.
 The `OS-Code` folder provides all of the source code changes we made to the operating system as raw C++ files.
-We wlll also provide our custom ROM within that folder as well.
+The full custom ROM is too large to store on GitHub, if you would like the ROM please email me at jwwest@wisc.edu.
 We are currently working on a custom patching script to deploy those changes, however, we will provide a written tutorial to install the patch yourself for the time being.
 The `python_scripts` folder will contain all python related code.
 This includes the OS logcat parser and the TikTok experiment script.
