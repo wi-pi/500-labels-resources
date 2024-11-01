@@ -215,105 +215,34 @@ static inline void CheckHoleCount(IrtEntry* table,
   }
 }
 
-struct weezy_buffer7 {
-    int pos;
-    int size;
-    char* mem;
-};
-
-
-char* _buf_reset7(struct weezy_buffer7*b) {
-    b->mem[b->pos] = 0;
-    b->pos = 0;
-    return b->mem;
-}
-
-struct weezy_buffer7* _new_buffer7(int length) {
-    struct weezy_buffer7* res = (struct weezy_buffer7*)malloc(sizeof(struct weezy_buffer7)+length+4);
-    res->pos = 0;
-    res->size = length;
-    res->mem = (char*)(res+1);
-    return res;
-}
-
-int _buf_putchar7(struct weezy_buffer7*b, int c) {
-    b->mem[b->pos++] = c;
-    return b->pos >= b->size;
-}
-
-bool change_mem7(void* address){
-  enum {
-    MPROT_0 = 0,                                         // not found at all
-    MPROT_R = PROT_READ,                                 // readable
-    MPROT_W = PROT_WRITE,                                // writable
-    MPROT_X = PROT_EXEC,                                 // executable
-    MPROT_S = 8,                                         // shared
-    MPROT_P = MPROT_S<<1,                                // private
-};
-
-
-  int a;
-  unsigned int res = 0;
-  FILE *f = fopen("/proc/self/maps", "r");
-  struct weezy_buffer7* b = _new_buffer7(1024);
-  bool is_readable = false;
-  char perms[5];
-  while ((a = fgetc(f)) >= 0) {
-      if (_buf_putchar7(b,a) || a == '\n') {
-          char*end0 = (char*)0;
-          unsigned long addr0 = strtoul(b->mem, &end0, 0x10);
-          char*end1 = (char*)0;
-          unsigned long addr1 = strtoul(end0+1, &end1, 0x10);
-          if ((void*)addr0 <= address && address < (void*)addr1) {
-              if((end1+1)[0] == 'r'){
-                res |= MPROT_R;
-                is_readable=true;
-                perms[0] = 'r';
-              }
-              if((end1+1)[1] == 'w'){
-                perms[1] = 'w';
-              }
-              if((end1+1)[2] == 'x'){
-                perms[2] = 'x';
-              }
-              if((end1+1)[3] == 'p'){
-                perms[3] = 'p';
-              }
-              if((end1+1)[3] == 's'){
-                perms[3] = 's';
-              }
-              perms[4] = '\0';
-              res |= (end1+1)[1] == 'w' ? MPROT_W : 0;
-              res |= (end1+1)[2] == 'x' ? MPROT_X : 0;
-              res |= (end1+1)[3] == 'p' ? MPROT_P
-                  : (end1+1)[3] == 's' ? MPROT_S : 0;
-              break;
-          }
-          _buf_reset7(b);
-      }
-  } 
-  free(b);
-  fclose(f);
-
-  // if(is_readable){
-  //   LOG(INFO) << StringPrintf("MEMORY READABLE WITH PERMISSIONS %s\t",perms)<< method_name;
-  // }else{
-  //   LOG(INFO) << StringPrintf("NOT READABLE WITH PERMISSIONS %s\t",perms)<< method_name;
-  // }
-  return is_readable;
-
-}
-
-int memory_region_approximation7(void* address, int max, int iter){
-  int max_region = 0;
-  for(int k = 0; k < max; k+=iter){
-    if (change_mem7((char*)address+k)){
-      max_region = k;
-    }else{
-      break;
+int max_readable_bytes7(void *ptr,int max) {
+    uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
+    std::ifstream maps_file("/proc/self/maps");
+    if (!maps_file) {
+        perror("Failed to open /proc/self/maps");
+        return -1;
     }
-  }
-  return max_region;
+
+    std::string line;
+    while (std::getline(maps_file, line)) {
+        uintptr_t start, end;
+        char perms[5];
+        std::istringstream iss(line);
+        iss >> std::hex >> start;
+        iss.ignore(1); // Ignore the '-' character
+        iss >> std::hex >> end;
+        iss >> perms;
+        if (!iss.fail() && addr >= start && addr < end && perms[0] == 'r') {
+            int distance_to_page =  end - addr;
+            if(distance_to_page < max){
+              return distance_to_page;
+            }else{
+              return max;
+            }
+        }
+    }
+
+    return -1;
 }
 
 
@@ -398,14 +327,13 @@ IndirectRef IndirectReferenceTable::Add(IRTSegmentState previous_state,
 
   RecoverHoles(previous_state);
   CheckHoleCount(table_, current_num_holes_, previous_state, segment_state_);
+  #ifdef __deez__
   int BYTES_TO_PRINT = 500;
-  
 
   std::ostringstream jweezy;
   void* holder = obj.Ptr();
-
-  BYTES_TO_PRINT =  memory_region_approximation7(holder,BYTES_TO_PRINT,BYTES_TO_PRINT/5);
-
+  BYTES_TO_PRINT =  max_readable_bytes7(holder,BYTES_TO_PRINT);
+  
   if(BYTES_TO_PRINT > 0){
     jweezy << "JACK INDIRECT REFERENCE TABLE LOG ADDING OBJECT:\t";
     jweezy << android::base::StringPrintf("OBJECT ADDR: %p\t",holder);
@@ -418,6 +346,7 @@ IndirectRef IndirectReferenceTable::Add(IRTSegmentState previous_state,
 
     LOG(INFO) << jweezy.str();
   }
+  #endif
 
   // We know there's enough room in the table.  Now we just need to find
   // the right spot.  If there's a hole, find it and fill it; otherwise,
